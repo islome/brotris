@@ -200,6 +200,91 @@ export default function TetrisGame() {
         : { type: "START", best: readBest() }
     );
 
+  // Touch gestures (mobile): drag = move, slow drag down = soft drop,
+  // fast downward flick = hard drop, tap = rotate. The board has
+  // `touch-none`, so the browser never scrolls/zooms from these touches.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const gestureRef = useRef<{
+    startX: number;
+    startY: number;
+    t0: number;
+    pitch: number; // px per board column
+    movedCols: number;
+    droppedRows: number;
+  } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (status !== "playing" || e.touches.length > 1) {
+      gestureRef.current = null;
+      return;
+    }
+    const t = e.touches[0];
+    gestureRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      t0: performance.now(),
+      pitch: (gridRef.current?.clientWidth ?? 320) / COLS,
+      movedCols: 0,
+      droppedRows: 0,
+    };
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const g = gestureRef.current;
+    if (!g || status !== "playing") return;
+    const t = e.touches[0];
+    const dx = t.clientX - g.startX;
+    const dy = t.clientY - g.startY;
+
+    // round: the piece snaps to the nearest column after half a cell of drag
+    const targetCols = Math.round(dx / g.pitch);
+    while (g.movedCols < targetCols) {
+      dispatch({ type: "MOVE", dir: 1 });
+      g.movedCols++;
+    }
+    while (g.movedCols > targetCols) {
+      dispatch({ type: "MOVE", dir: -1 });
+      g.movedCols--;
+    }
+
+    // Soft drop engages only on sustained drags so quick flicks stay hard drops
+    if (performance.now() - g.t0 > 150) {
+      const targetRows = Math.trunc(dy / g.pitch);
+      while (g.droppedRows < targetRows) {
+        dispatch({ type: "SOFT_DROP" });
+        g.droppedRows++;
+      }
+    }
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const g = gestureRef.current;
+    gestureRef.current = null;
+    if (!g || status !== "playing") return;
+    const t = e.changedTouches[0];
+    const dt = Math.max(1, performance.now() - g.t0);
+    const dx = t.clientX - g.startX;
+    const dy = t.clientY - g.startY;
+
+    if (dy > 55 && dy > Math.abs(dx) * 1.4 && dy / dt > 0.55) {
+      dispatch({ type: "HARD_DROP" });
+      return;
+    }
+    if (
+      Math.abs(dx) < 12 &&
+      Math.abs(dy) < 12 &&
+      dt < 300 &&
+      g.movedCols === 0 &&
+      g.droppedRows === 0
+    ) {
+      dispatch({ type: "ROTATE" });
+    }
+  };
+
+  const onTouchCancel = () => {
+    gestureRef.current = null;
+  };
+
   return (
     <main className="relative flex min-h-svh select-none flex-col items-center justify-center gap-4 overflow-hidden p-4">
       <Backdrop />
@@ -253,8 +338,15 @@ export default function TetrisGame() {
 
         <div className="flex items-start gap-4">
           {/* Board */}
-          <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2">
+          <div
+            className="relative touch-none overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchCancel}
+          >
             <div
+              ref={gridRef}
               className="grid gap-[3px] xl:gap-1"
               style={{
                 gridTemplateColumns: `repeat(${COLS}, var(--cell))`,
@@ -394,12 +486,19 @@ function Overlay({
         <PlayIcon className="size-8 pr-1 translate-x-[2px] xl:size-7" />
       </button>
 
-      <p className="text-[10px] uppercase tracking-[0.25em] text-foreground/40">
+      <p className="hidden text-[10px] uppercase tracking-[0.25em] text-foreground/40 sm:block">
         {status === "paused"
           ? "Davom etish — Space"
           : status === "over"
             ? "Qayta boshlash — Space"
             : "Boshlash — Space"}
+      </p>
+      <p className="px-6 text-center text-[10px] uppercase leading-5 tracking-[0.2em] text-foreground/40 sm:hidden">
+        {status === "idle"
+          ? "Suring — harakat · Tap — burish · Pastga siltang — tashlash"
+          : status === "paused"
+            ? "Davom etish uchun tugmani bosing"
+            : "Qayta o'ynash uchun tugmani bosing"}
       </p>
     </div>
   );
