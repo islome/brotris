@@ -375,7 +375,7 @@ function Overlay({
       ) : (
         <div className="text-center">
           <h1 className="text-4xl font-black tracking-[0.35em] text-foreground xl:text-5xl">
-            TETRA
+            BROTRIS
           </h1>
           <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-foreground/45">
             Minimalist blok o&apos;yini
@@ -407,26 +407,25 @@ function Overlay({
 
 const CONFETTI_COLORS = Object.values(COLORS).map((c) => c.base);
 
+// Randomized once at module load: render must stay pure (react-hooks/purity),
+// and a fixed layout is imperceptible across 46 looping pieces.
+const CONFETTI_PIECES = Array.from({ length: 46 }, (_, i) => ({
+  left: Math.random() * 100,
+  size: 6 + Math.random() * 5,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  delay: Math.random() * 2.4,
+  duration: 2.6 + Math.random() * 1.8,
+  drift: -70 + Math.random() * 140,
+  spin: 360 + Math.random() * 540,
+}));
+
 function Confetti() {
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: 46 }, (_, i) => ({
-        left: Math.random() * 100,
-        size: 6 + Math.random() * 5,
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        delay: Math.random() * 2.4,
-        duration: 2.6 + Math.random() * 1.8,
-        drift: -70 + Math.random() * 140,
-        spin: 360 + Math.random() * 540,
-      })),
-    []
-  );
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
-      {pieces.map((p, i) => (
+      {CONFETTI_PIECES.map((p, i) => (
         <span
           key={i}
           className="confetti-piece absolute rounded-[2px]"
