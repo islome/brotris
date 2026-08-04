@@ -30,10 +30,11 @@ export interface GameState {
   fx: { seq: number; kind: FxKind }; // sound-effect event; seq bumps on each new event
   bestAtStart: number; // high score when this run began (from localStorage)
   newRecord: boolean; // set when the run ends above bestAtStart
+  startLevel: number; // level this run began on; levels climb from here
 }
 
 export type GameAction =
-  | { type: "START"; best?: number }
+  | { type: "START"; best?: number; level?: number }
   | { type: "TOGGLE_PAUSE" }
   | { type: "TICK" }
   | { type: "MOVE"; dir: -1 | 1 }
@@ -153,9 +154,10 @@ function shuffle<T>(arr: readonly T[]): T[] {
 }
 
 // 7-bag randomizer: every 7 consecutive pieces contain each tetromino once.
+// Buffers a full bag ahead so the queue can always feed a 5-piece preview.
 function refillQueue(queue: TetrominoType[]): TetrominoType[] {
   const q = [...queue];
-  while (q.length < 4) q.push(...shuffle(ALL_TYPES));
+  while (q.length < 7) q.push(...shuffle(ALL_TYPES));
   return q;
 }
 
@@ -231,7 +233,7 @@ function lockPiece(state: GameState): GameState {
   return spawnNext({ ...state, board, fx: bumpFx(state, "lock") });
 }
 
-function startGame(best: number): GameState {
+function startGame(best: number, startLevel: number): GameState {
   const [first, ...rest] = refillQueue([]);
   return {
     board: createBoard(),
@@ -240,11 +242,12 @@ function startGame(best: number): GameState {
     status: "playing",
     score: 0,
     lines: 0,
-    level: 1,
+    level: startLevel,
     clearing: [],
     fx: { seq: 0, kind: null },
     bestAtStart: best,
     newRecord: false,
+    startLevel,
   };
 }
 
@@ -260,13 +263,14 @@ export const initialState: GameState = {
   fx: { seq: 0, kind: null },
   bestAtStart: 0,
   newRecord: false,
+  startLevel: 1,
 };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "START": {
       if (state.status === "playing" || state.status === "paused") return state;
-      return startGame(action.best ?? 0);
+      return startGame(action.best ?? 0, action.level ?? 1);
     }
     case "TOGGLE_PAUSE": {
       if (state.status === "playing") return { ...state, status: "paused" };
@@ -335,7 +339,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         board,
         clearing: [],
         lines,
-        level: Math.floor(lines / 10) + 1,
+        level: state.startLevel + Math.floor(lines / 10),
         score: state.score + LINE_SCORES[cleared] * state.level,
       });
     }

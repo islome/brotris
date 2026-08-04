@@ -25,6 +25,10 @@ const CHORD_DUR = 3.8;
 // A-minor pentatonic for the sparse pluck melody
 const PLUCKS = [440.0, 523.25, 587.33, 659.26, 783.99, 880.0];
 
+// Bus levels at full volume; the settings sliders scale these.
+const SFX_BASE = 0.55;
+const MUSIC_BASE = 0.14;
+
 interface Graph {
   ctx: AudioContext;
   master: GainNode;
@@ -46,6 +50,8 @@ class SoundEngine {
   private files: Partial<Record<SfxName, AudioBuffer>> = {};
   private filesRequested = false;
   private muted = false;
+  private sfxVolume = 1;
+  private musicVolume = 1;
   private musicOn = false;
   private chordIdx = 0;
   private musicTimer: ReturnType<typeof setTimeout> | null = null;
@@ -67,7 +73,7 @@ class SoundEngine {
       master.connect(ctx.destination);
 
       const sfx = ctx.createGain();
-      sfx.gain.value = 0.55;
+      sfx.gain.value = SFX_BASE * this.sfxVolume;
       sfx.connect(master);
 
       const music = ctx.createGain();
@@ -136,6 +142,30 @@ class SoundEngine {
         muted ? 0 : 0.9,
         this.graph.ctx.currentTime,
         0.02
+      );
+    }
+  }
+
+  // Volume setters never call ensure(): an AudioContext must not be created
+  // before a user gesture, and settings can change while the game is idle.
+  setSfxVolume(volume: number) {
+    this.sfxVolume = Math.min(1, Math.max(0, volume));
+    if (this.graph) {
+      this.graph.sfx.gain.setTargetAtTime(
+        SFX_BASE * this.sfxVolume,
+        this.graph.ctx.currentTime,
+        0.02
+      );
+    }
+  }
+
+  setMusicVolume(volume: number) {
+    this.musicVolume = Math.min(1, Math.max(0, volume));
+    if (this.graph && this.musicOn) {
+      this.graph.music.gain.setTargetAtTime(
+        MUSIC_BASE * this.musicVolume,
+        this.graph.ctx.currentTime,
+        0.15
       );
     }
   }
@@ -306,7 +336,7 @@ class SoundEngine {
       clearTimeout(this.musicStopTimer);
       this.musicStopTimer = null;
     }
-    g.music.gain.setTargetAtTime(0.14, g.ctx.currentTime, 0.6);
+    g.music.gain.setTargetAtTime(MUSIC_BASE * this.musicVolume, g.ctx.currentTime, 0.6);
     this.startMusicSource(g);
   }
 

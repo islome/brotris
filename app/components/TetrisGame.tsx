@@ -5,6 +5,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
@@ -19,10 +20,18 @@ import {
   gameReducer,
   getDropY,
   initialState,
+  type GameAction,
   type GameStatus,
   type TetrominoType,
 } from "../lib/tetris";
 import { sound } from "../lib/sound";
+import {
+  applyTheme,
+  readSettings,
+  serverSettings,
+  subscribeSettings,
+} from "../lib/settings";
+import SettingsPanel from "./SettingsPanel";
 
 const MUTED_KEY = "tetra-muted";
 const MUTED_EVENT = "tetra-muted-change";
@@ -67,11 +76,29 @@ function writeBest(score: number) {
   window.dispatchEvent(new Event(BEST_EVENT));
 }
 
+// A fresh run always picks up the stored best and starting level.
+function startAction(): GameAction {
+  return { type: "START", best: readBest(), level: readSettings().startLevel };
+}
+
+// Unsupported on iOS Safari, where this is simply a no-op.
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(pattern);
+  }
+}
+
 export default function TetrisGame() {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const { status, board, active, queue, score, lines, level, clearing } = state;
   const muted = useSyncExternalStore(subscribeMuted, readMuted, () => false);
   const best = useSyncExternalStore(subscribeBest, readBest, () => 0);
+  const settings = useSyncExternalStore(
+    subscribeSettings,
+    readSettings,
+    serverSettings
+  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Gravity loop
   useEffect(() => {
@@ -95,17 +122,39 @@ export default function TetrisGame() {
     sound.setMuted(muted);
   }, [muted]);
 
+  // Settings: theme override and per-bus volumes
+  useEffect(() => {
+    applyTheme(settings.theme);
+  }, [settings.theme]);
+
+  useEffect(() => {
+    sound.setSfxVolume(settings.sfxVolume);
+  }, [settings.sfxVolume]);
+
+  useEffect(() => {
+    sound.setMusicVolume(settings.musicVolume);
+  }, [settings.musicVolume]);
+
   // Sound: game events (wood knock on lock, fire on clear, sweep on game over)
   const lastFxSeq = useRef(0);
   useEffect(() => {
     const { seq, kind } = state.fx;
     if (!kind || seq === lastFxSeq.current) return;
     lastFxSeq.current = seq;
-    if (kind === "lock") sound.playLock();
-    else if (kind === "clear") sound.playClear(Math.max(1, clearing.length));
-    else if (kind === "record") sound.playRecord();
-    else sound.playOver();
-  }, [state.fx, clearing.length]);
+    if (kind === "lock") {
+      sound.playLock();
+      if (settings.vibration) vibrate(12);
+    } else if (kind === "clear") {
+      sound.playClear(Math.max(1, clearing.length));
+      if (settings.vibration) vibrate([0, 22, 40, 22]);
+    } else if (kind === "record") {
+      sound.playRecord();
+      if (settings.vibration) vibrate([0, 40, 70, 40, 70, 90]);
+    } else {
+      sound.playOver();
+      if (settings.vibration) vibrate(120);
+    }
+  }, [state.fx, clearing.length, settings.vibration]);
 
   // Persist the new high score once the run ends above the old one
   useEffect(() => {
@@ -122,6 +171,10 @@ export default function TetrisGame() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (settingsOpen) {
+        if (e.code === "Escape") setSettingsOpen(false);
+        return;
+      }
       switch (e.code) {
         case "ArrowLeft":
           e.preventDefault();
@@ -145,21 +198,21 @@ export default function TetrisGame() {
           if (e.repeat) break;
           if (status === "playing") dispatch({ type: "HARD_DROP" });
           else if (status === "paused") dispatch({ type: "TOGGLE_PAUSE" });
-          else dispatch({ type: "START", best: readBest() });
+          else dispatch(startAction());
           break;
         case "KeyP":
           if (!e.repeat) dispatch({ type: "TOGGLE_PAUSE" });
           break;
         case "Enter":
           if (!e.repeat && (status === "idle" || status === "over")) {
-            dispatch({ type: "START", best: readBest() });
+            dispatch(startAction());
           }
           break;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [status]);
+  }, [status, settingsOpen]);
 
   // Locked board + ghost + active piece merged into one display grid
   const display = useMemo(() => {
@@ -168,14 +221,16 @@ export default function TetrisGame() {
     );
     if (active && (status === "playing" || status === "paused")) {
       const shape = SHAPES[active.type][active.rotation];
-      const ghostY = getDropY(board, active);
-      for (let y = 0; y < shape.length; y++) {
-        for (let x = 0; x < shape[y].length; x++) {
-          if (!shape[y][x]) continue;
-          const bx = active.x + x;
-          const gy = ghostY + y;
-          if (gy >= 0 && gy < ROWS && bx >= 0 && bx < COLS) {
-            grid[gy][bx].ghost = active.type;
+      if (settings.ghost) {
+        const ghostY = getDropY(board, active);
+        for (let y = 0; y < shape.length; y++) {
+          for (let x = 0; x < shape[y].length; x++) {
+            if (!shape[y][x]) continue;
+            const bx = active.x + x;
+            const gy = ghostY + y;
+            if (gy >= 0 && gy < ROWS && bx >= 0 && bx < COLS) {
+              grid[gy][bx].ghost = active.type;
+            }
           }
         }
       }
@@ -191,14 +246,17 @@ export default function TetrisGame() {
       }
     }
     return grid;
-  }, [board, active, status]);
+  }, [board, active, status, settings.ghost]);
 
   const primaryAction = () =>
-    dispatch(
-      status === "paused"
-        ? { type: "TOGGLE_PAUSE" }
-        : { type: "START", best: readBest() }
-    );
+    dispatch(status === "paused" ? { type: "TOGGLE_PAUSE" } : startAction());
+
+  // Opening settings pauses the run; closing leaves it paused so the player
+  // resumes deliberately instead of being dropped back mid-fall.
+  const openSettings = () => {
+    if (status === "playing") dispatch({ type: "TOGGLE_PAUSE" });
+    setSettingsOpen(true);
+  };
 
   // Touch gestures (mobile): drag = move, slow drag down = soft drop,
   // fast downward flick = hard drop, tap = rotate. The board has
@@ -301,6 +359,16 @@ export default function TetrisGame() {
             <button
               onClick={(e) => {
                 e.currentTarget.blur();
+                openSettings();
+              }}
+              aria-label="Sozlamalar"
+              className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-foreground/10 bg-foreground/[0.05] text-foreground/80 transition hover:bg-foreground/[0.12] hover:text-foreground"
+            >
+              <GearIcon className="size-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.currentTarget.blur();
                 toggleMuted();
               }}
               aria-label={muted ? "Ovozni yoqish" : "Ovozni o'chirish"}
@@ -318,7 +386,7 @@ export default function TetrisGame() {
                 dispatch(
                   status === "playing" || status === "paused"
                     ? { type: "TOGGLE_PAUSE" }
-                    : { type: "START", best: readBest() }
+                    : startAction()
                 );
               }}
               aria-label={status === "playing" ? "Pauza" : "Boshlash"}
@@ -396,12 +464,26 @@ export default function TetrisGame() {
                 onPrimary={primaryAction}
               />
             )}
+
+            {settingsOpen && (
+              <SettingsPanel
+                settings={settings}
+                onClose={() => setSettingsOpen(false)}
+              />
+            )}
           </div>
 
           {/* Sidebar */}
           <aside className="hidden w-36 flex-col gap-3 sm:flex xl:w-44">
             <Panel label="Next">
               <NextPreview type={queue[0] ?? null} />
+              {settings.nextCount > 1 && queue.length > 1 && (
+                <div className="mt-2 flex flex-col gap-2 border-t border-foreground/[0.08] pt-2">
+                  {queue.slice(1, settings.nextCount).map((type, i) => (
+                    <QueuePreview key={i} type={type} />
+                  ))}
+                </div>
+              )}
             </Panel>
             <Panel label="Score">{score.toLocaleString("en-US")}</Panel>
             <Panel label="Best">{best.toLocaleString("en-US")}</Panel>
@@ -554,10 +636,7 @@ function Panel({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function NextPreview({ type }: { type: TetrominoType | null }) {
-  if (!type) {
-    return <div className="flex h-11 items-center text-foreground/30">—</div>;
-  }
+function shapeBounds(type: TetrominoType) {
   const shape = SHAPES[type][0];
   const coords: Array<[number, number]> = [];
   shape.forEach((row, y) =>
@@ -569,8 +648,20 @@ function NextPreview({ type }: { type: TetrominoType | null }) {
   const ys = coords.map((c) => c[1]);
   const minX = Math.min(...xs);
   const minY = Math.min(...ys);
-  const w = Math.max(...xs) - minX + 1;
-  const h = Math.max(...ys) - minY + 1;
+  return {
+    shape,
+    minX,
+    minY,
+    w: Math.max(...xs) - minX + 1,
+    h: Math.max(...ys) - minY + 1,
+  };
+}
+
+function NextPreview({ type }: { type: TetrominoType | null }) {
+  if (!type) {
+    return <div className="flex h-11 items-center text-foreground/30">—</div>;
+  }
+  const { shape, minX, minY, w, h } = shapeBounds(type);
   const c = COLORS[type];
 
   return (
@@ -590,6 +681,32 @@ function NextPreview({ type }: { type: TetrominoType | null }) {
                   ? { background: c.base, boxShadow: `0 0 8px ${c.glow}` }
                   : undefined
               }
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Lookahead beyond the immediate next piece: same shapes, quieter.
+function QueuePreview({ type }: { type: TetrominoType }) {
+  const { shape, minX, minY, w, h } = shapeBounds(type);
+  const c = COLORS[type];
+
+  return (
+    <div className="flex items-center opacity-55">
+      <div
+        className="grid gap-[2px]"
+        style={{ gridTemplateColumns: `repeat(${w}, 9px)`, gridAutoRows: "9px" }}
+      >
+        {Array.from({ length: w * h }, (_, i) => {
+          const filled = shape[Math.floor(i / w) + minY][(i % w) + minX] === 1;
+          return (
+            <div
+              key={i}
+              className="rounded-[2px]"
+              style={filled ? { background: c.base } : undefined}
             />
           );
         })}
@@ -641,6 +758,28 @@ function PauseIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
       <path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z" />
+    </svg>
+  );
+}
+
+function GearIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <circle
+        cx="12"
+        cy="12"
+        r="3.1"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M12 2.6l1.5 2.3 2.7-.5.6 2.7 2.5 1.1-1.1 2.5 1.8 2.1-2.2 1.7.3 2.7-2.8.3-1.4 2.4L12 19.4l-1.9 1.2-1.4-2.4-2.8-.3.3-2.7-2.2-1.7 1.8-2.1L4.7 8.9l2.5-1.1.6-2.7 2.7.5z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
