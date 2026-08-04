@@ -186,6 +186,26 @@ class SoundEngine {
     this.synthFire(g, lines);
   }
 
+  // Deliberately quiet: this fires often and must never nag.
+  playHold() {
+    const g = this.ensure();
+    if (!g) return;
+    const t = g.ctx.currentTime;
+    [740, 988].forEach((freq, i) => {
+      const start = t + i * 0.045;
+      const osc = g.ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const env = g.ctx.createGain();
+      env.gain.setValueAtTime(0.0001, start);
+      env.gain.linearRampToValueAtTime(0.06, start + 0.008);
+      env.gain.exponentialRampToValueAtTime(0.0001, start + 0.13);
+      osc.connect(env).connect(g.sfx);
+      osc.start(start);
+      osc.stop(start + 0.15);
+    });
+  }
+
   // Celebration fanfare: rising pentatonic run + soft closing chord
   playRecord() {
     const g = this.ensure();

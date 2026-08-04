@@ -96,6 +96,14 @@ export default function SettingsPanel({
           />
         </Row>
 
+        <Row label="Hold" hint="C — blokni saqlash">
+          <Toggle
+            checked={settings.hold}
+            label="Hold"
+            onChange={(hold) => writeSettings({ hold })}
+          />
+        </Row>
+
         <Row label="Soya" hint="Blok qayerga tushishi">
           <Toggle
             checked={settings.ghost}

@@ -16,7 +16,7 @@ export interface ActivePiece {
   y: number; // board row of the shape matrix's top edge (may be negative at spawn)
 }
 
-export type FxKind = "lock" | "clear" | "over" | "record" | null;
+export type FxKind = "lock" | "clear" | "over" | "record" | "hold" | null;
 
 export interface GameState {
   board: Board;
@@ -31,6 +31,8 @@ export interface GameState {
   bestAtStart: number; // high score when this run began (from localStorage)
   newRecord: boolean; // set when the run ends above bestAtStart
   startLevel: number; // level this run began on; levels climb from here
+  hold: TetrominoType | null; // stashed piece, swapped in on the next HOLD
+  holdUsed: boolean; // one hold per piece; clears when the next piece spawns
 }
 
 export type GameAction =
@@ -41,6 +43,7 @@ export type GameAction =
   | { type: "ROTATE" }
   | { type: "SOFT_DROP" }
   | { type: "HARD_DROP" }
+  | { type: "HOLD" }
   | { type: "CLEAR_COMPLETE" };
 
 export const ALL_TYPES: TetrominoType[] = ["I", "O", "T", "S", "Z", "J", "L"];
@@ -195,7 +198,8 @@ function spawnNext(state: GameState): GameState {
   if (collides(state.board, active)) {
     return gameOver(state, { active: null, queue });
   }
-  return { ...state, active, queue };
+  // A naturally spawned piece re-arms the hold slot.
+  return { ...state, active, queue, holdUsed: false };
 }
 
 function lockPiece(state: GameState): GameState {
@@ -248,6 +252,8 @@ function startGame(best: number, startLevel: number): GameState {
     bestAtStart: best,
     newRecord: false,
     startLevel,
+    hold: null,
+    holdUsed: false,
   };
 }
 
@@ -264,6 +270,8 @@ export const initialState: GameState = {
   bestAtStart: 0,
   newRecord: false,
   startLevel: 1,
+  hold: null,
+  holdUsed: false,
 };
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -323,6 +331,31 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         active: { ...state.active, y: dropY },
         score: state.score + dist * 2,
       });
+    }
+    case "HOLD": {
+      if (state.status !== "playing" || !state.active || state.holdUsed) return state;
+      const stashed = state.active.type;
+
+      // Empty slot: stash the falling piece and pull the next one from the queue.
+      if (state.hold === null) {
+        const pulled = spawnNext({
+          ...state,
+          hold: stashed,
+          fx: bumpFx(state, "hold"),
+        });
+        return { ...pulled, holdUsed: true };
+      }
+
+      // Occupied slot: swap. A blocked spawn is a block-out like any other.
+      const swapped = spawnPiece(state.hold);
+      const next = {
+        ...state,
+        hold: stashed,
+        holdUsed: true,
+        fx: bumpFx(state, "hold"),
+      };
+      if (collides(state.board, swapped)) return gameOver(next, { active: null });
+      return { ...next, active: swapped };
     }
     case "CLEAR_COMPLETE": {
       // Fires even while paused so the game never gets stuck without a piece.

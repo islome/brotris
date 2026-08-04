@@ -15,6 +15,7 @@ export interface Settings {
   ghost: boolean;
   vibration: boolean;
   nextCount: NextCount;
+  hold: boolean;
 }
 
 // Defaults reproduce the pre-settings behaviour exactly.
@@ -26,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = Object.freeze({
   ghost: true,
   vibration: true,
   nextCount: 1,
+  hold: true,
 });
 
 export const SETTINGS_KEY = "tetra-settings";
@@ -48,6 +50,7 @@ function sanitize(raw: unknown): Settings {
     vibration:
       typeof o.vibration === "boolean" ? o.vibration : DEFAULT_SETTINGS.vibration,
     nextCount: o.nextCount === 3 || o.nextCount === 5 ? o.nextCount : 1,
+    hold: typeof o.hold === "boolean" ? o.hold : DEFAULT_SETTINGS.hold,
   };
 }
 

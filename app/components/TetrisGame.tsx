@@ -141,7 +141,10 @@ export default function TetrisGame() {
     const { seq, kind } = state.fx;
     if (!kind || seq === lastFxSeq.current) return;
     lastFxSeq.current = seq;
-    if (kind === "lock") {
+    if (kind === "hold") {
+      sound.playHold();
+      if (settings.vibration) vibrate(8);
+    } else if (kind === "lock") {
       sound.playLock();
       if (settings.vibration) vibrate(12);
     } else if (kind === "clear") {
@@ -199,6 +202,12 @@ export default function TetrisGame() {
           if (status === "playing") dispatch({ type: "HARD_DROP" });
           else if (status === "paused") dispatch({ type: "TOGGLE_PAUSE" });
           else dispatch(startAction());
+          break;
+        case "KeyC":
+        case "ShiftLeft":
+        case "ShiftRight":
+          e.preventDefault();
+          if (!e.repeat && readSettings().hold) dispatch({ type: "HOLD" });
           break;
         case "KeyP":
           if (!e.repeat) dispatch({ type: "TOGGLE_PAUSE" });
@@ -475,6 +484,15 @@ export default function TetrisGame() {
 
           {/* Sidebar */}
           <aside className="hidden w-36 flex-col gap-3 sm:flex xl:w-44">
+            {settings.hold && (
+              <Panel label="Hold">
+                <div
+                  className={`transition-opacity ${state.holdUsed ? "opacity-25" : ""}`}
+                >
+                  <NextPreview type={state.hold} />
+                </div>
+              </Panel>
+            )}
             <Panel label="Next">
               <NextPreview type={queue[0] ?? null} />
               {settings.nextCount > 1 && queue.length > 1 && (
@@ -489,7 +507,7 @@ export default function TetrisGame() {
             <Panel label="Best">{best.toLocaleString("en-US")}</Panel>
             <Panel label="Lines">{lines}</Panel>
             <Panel label="Level">{level}</Panel>
-            <Hints />
+            <Hints hold={settings.hold} />
           </aside>
         </div>
 
@@ -715,16 +733,19 @@ function QueuePreview({ type }: { type: TetrominoType }) {
   );
 }
 
-function Hints() {
+function Hints({ hold }: { hold: boolean }) {
   const rows: Array<[string, string]> = [
     ["← →", "harakat"],
     ["↑", "burish"],
     ["↓", "tez tushish"],
     ["Space", "tashlash"],
+    ...(hold ? [["C", "saqlash"] as [string, string]] : []),
     ["P", "pauza"],
   ];
+  // The hint card is onboarding, not gameplay data, so it is the first thing to
+  // go when a short laptop viewport cannot fit the whole sidebar.
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl border border-foreground/[0.07] bg-foreground/[0.02] px-4 py-3 backdrop-blur-xl">
+    <div className="flex flex-col gap-1.5 rounded-xl border border-foreground/[0.07] bg-foreground/[0.02] px-4 py-3 backdrop-blur-xl [@media(max-height:840px)]:hidden">
       {rows.map(([k, v]) => (
         <div key={k} className="flex items-center justify-between">
           <kbd className="inline-flex min-w-6 items-center justify-center rounded-md border border-foreground/15 bg-foreground/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-foreground/70">
