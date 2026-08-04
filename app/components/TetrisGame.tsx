@@ -286,18 +286,15 @@ export default function TetrisGame() {
   };
 
   return (
-    <main className="relative flex min-h-svh select-none flex-col items-center justify-center gap-4 overflow-hidden p-4">
+    <main className="relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden p-2 sm:gap-4 sm:p-4">
       <Backdrop />
 
-      <div className="flex flex-col gap-3 [--cell:clamp(15px,3.2svh,28px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_165px)/20),calc((100vw_-_55px)/10)),30px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-bold tracking-[0.4em] text-foreground/85">
               BROTRIS
-            </span>
-            <span className="rounded-full border border-foreground/10 bg-foreground/[0.04] px-2 py-0.5 text-[9px] font-medium tracking-[0.2em] text-foreground/40">
-              2026
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -339,7 +336,7 @@ export default function TetrisGame() {
         <div className="flex items-start gap-4">
           {/* Board */}
           <div
-            className="relative touch-none overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2"
+            className="relative touch-none overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl max-sm:flex max-sm:w-full max-sm:justify-center xl:p-2"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -467,11 +464,8 @@ function Overlay({
       ) : (
         <div className="text-center">
           <h1 className="text-4xl font-black tracking-[0.35em] text-foreground xl:text-5xl">
-            BROTRIS
+            PLAY
           </h1>
-          <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-foreground/45">
-            Minimalist blok o&apos;yini
-          </p>
         </div>
       )}
 
