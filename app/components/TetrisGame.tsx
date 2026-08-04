@@ -337,6 +337,18 @@ export default function TetrisGame() {
       dispatch({ type: "HARD_DROP" });
       return;
     }
+    // Mirror of the hard-drop flick. `movedCols === 0` keeps a sideways drag
+    // that lifts off on an upward arc from stealing the piece.
+    if (
+      dy < -55 &&
+      -dy > Math.abs(dx) * 1.4 &&
+      -dy / dt > 0.55 &&
+      g.movedCols === 0 &&
+      readSettings().hold
+    ) {
+      dispatch({ type: "HOLD" });
+      return;
+    }
     if (
       Math.abs(dx) < 12 &&
       Math.abs(dy) < 12 &&
@@ -356,7 +368,7 @@ export default function TetrisGame() {
     <main className="relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden p-2 sm:gap-4 sm:p-4">
       <Backdrop />
 
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_165px)/20),calc((100vw_-_55px)/10)),30px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_181px)/20),calc((100vw_-_55px)/10)),30px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
@@ -470,6 +482,7 @@ export default function TetrisGame() {
                 score={score}
                 best={best}
                 newRecord={state.newRecord}
+                hold={settings.hold}
                 onPrimary={primaryAction}
               />
             )}
@@ -512,7 +525,21 @@ export default function TetrisGame() {
         </div>
 
         {/* Compact stats for mobile */}
-        <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 font-mono text-xs text-foreground/50 sm:hidden">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 font-mono text-xs text-foreground/50 sm:hidden">
+          {settings.hold && (
+            <span className="flex items-center gap-1.5">
+              HOLD
+              {state.hold ? (
+                <span
+                  className={`transition-opacity ${state.holdUsed ? "opacity-25" : ""}`}
+                >
+                  <QueuePreview type={state.hold} size={7} dim={false} />
+                </span>
+              ) : (
+                <span className="text-foreground/30">—</span>
+              )}
+            </span>
+          )}
           <span>SCORE {score}</span>
           <span>BEST {best}</span>
           <span>LINES {lines}</span>
@@ -528,12 +555,14 @@ function Overlay({
   score,
   best,
   newRecord,
+  hold,
   onPrimary,
 }: {
   status: GameStatus;
   score: number;
   best: number;
   newRecord: boolean;
+  hold: boolean;
   onPrimary: () => void;
 }) {
   return (
@@ -589,7 +618,9 @@ function Overlay({
       </p>
       <p className="px-6 text-center text-[10px] uppercase leading-5 tracking-[0.2em] text-foreground/40 sm:hidden">
         {status === "idle"
-          ? "Suring — harakat · Tap — burish · Pastga siltang — tashlash"
+          ? `Suring — harakat · Tap — burish · Pastga siltang — tashlash${
+              hold ? " · Yuqoriga — saqlash" : ""
+            }`
           : status === "paused"
             ? "Davom etish uchun tugmani bosing"
             : "Qayta o'ynash uchun tugmani bosing"}
@@ -708,15 +739,27 @@ function NextPreview({ type }: { type: TetrominoType | null }) {
 }
 
 // Lookahead beyond the immediate next piece: same shapes, quieter.
-function QueuePreview({ type }: { type: TetrominoType }) {
+// Defaults render the sidebar queue; the mobile hold chip overrides both.
+function QueuePreview({
+  type,
+  size = 9,
+  dim = true,
+}: {
+  type: TetrominoType;
+  size?: number;
+  dim?: boolean;
+}) {
   const { shape, minX, minY, w, h } = shapeBounds(type);
   const c = COLORS[type];
 
   return (
-    <div className="flex items-center opacity-55">
+    <div className={`flex items-center ${dim ? "opacity-55" : ""}`}>
       <div
         className="grid gap-[2px]"
-        style={{ gridTemplateColumns: `repeat(${w}, 9px)`, gridAutoRows: "9px" }}
+        style={{
+          gridTemplateColumns: `repeat(${w}, ${size}px)`,
+          gridAutoRows: `${size}px`,
+        }}
       >
         {Array.from({ length: w * h }, (_, i) => {
           const filled = shape[Math.floor(i / w) + minY][(i % w) + minX] === 1;
