@@ -369,7 +369,7 @@ export default function TetrisGame() {
     <main className="relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden p-2 sm:gap-4 sm:p-4">
       <Backdrop />
 
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_181px)/20),calc((100vw_-_57px)/10)),44px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_158px)/20),calc((100vw_-_57px)/10)),44px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
@@ -529,7 +529,9 @@ export default function TetrisGame() {
         </div>
 
         {/* Compact stats for mobile */}
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 font-mono text-xs text-foreground/50 sm:hidden">
+        {/* Tight enough that six-digit scores still fit on one line — the
+            --cell height reserve below assumes this row never wraps. */}
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono text-[11px] leading-4 text-foreground/50 sm:hidden">
           {settings.hold && (
             <span className="flex items-center gap-1.5">
               HOLD
