@@ -369,7 +369,7 @@ export default function TetrisGame() {
     <main className="relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden p-2 sm:gap-4 sm:p-4">
       <Backdrop />
 
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_181px)/20),calc((100vw_-_55px)/10)),30px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_181px)/20),calc((100vw_-_57px)/10)),44px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
@@ -423,10 +423,12 @@ export default function TetrisGame() {
           </div>
         </header>
 
-        <div className="flex items-start gap-4">
+        {/* Board hugs the grid; on phones it centres instead of stretching, so
+            the panel never shows empty rails beside the playfield. */}
+        <div className="flex items-start gap-4 max-sm:justify-center">
           {/* Board */}
           <div
-            className="relative touch-none overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl max-sm:flex max-sm:w-full max-sm:justify-center xl:p-2"
+            className="relative touch-none overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
