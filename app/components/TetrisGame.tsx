@@ -616,16 +616,105 @@ function Overlay({
             ? "Qayta boshlash — Space"
             : "Boshlash — Space"}
       </p>
-      <p className="px-6 text-center text-[10px] uppercase leading-5 tracking-[0.2em] text-foreground/40 sm:hidden">
-        {status === "idle"
-          ? `Suring — harakat · Tap — burish · Pastga siltang — tashlash${
-              hold ? " · Yuqoriga — saqlash" : ""
-            }`
-          : status === "paused"
+      {status === "idle" ? (
+        <GestureGuide hold={hold} />
+      ) : (
+        <p className="px-6 text-center text-[10px] uppercase leading-5 tracking-[0.2em] text-foreground/40 sm:hidden">
+          {status === "paused"
             ? "Davom etish uchun tugmani bosing"
             : "Qayta o'ynash uchun tugmani bosing"}
-      </p>
+        </p>
+      )}
     </div>
+  );
+}
+
+// Touch-only onboarding, so it never appears next to the keyboard hints.
+function GestureGuide({ hold }: { hold: boolean }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:hidden">
+      <GestureDemo kind="move" label="Harakat" />
+      <GestureDemo kind="tap" label="Burish" />
+      <GestureDemo kind="down" label="Tashlash" />
+      {hold && <GestureDemo kind="up" label="Saqlash" />}
+    </div>
+  );
+}
+
+function GestureDemo({
+  kind,
+  label,
+}: {
+  kind: "move" | "tap" | "down" | "up";
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative flex h-16 w-20 items-center justify-center">
+        <GestureTrack kind={kind} />
+        {kind === "tap" && (
+          <span className="gesture-ripple absolute top-1.5 size-5 rounded-full border border-foreground/60" />
+        )}
+        <HandIcon
+          className={`gesture-hand gesture-hand-${kind} relative h-11 text-foreground/75`}
+        />
+      </div>
+      <span className="text-[9px] uppercase tracking-[0.2em] text-foreground/40">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// Faint arrow behind the hand so the direction reads before the motion does.
+function GestureTrack({ kind }: { kind: "move" | "tap" | "down" | "up" }) {
+  if (kind === "tap") return null;
+  const horizontal = kind === "move";
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      className="absolute inset-0 size-full text-foreground/15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {horizontal ? (
+        <>
+          <path d="M14 32h36" />
+          <path d="M18 27l-5 5 5 5M46 27l5 5-5 5" />
+        </>
+      ) : kind === "down" ? (
+        <>
+          <path d="M32 14v36" />
+          <path d="M27 45l5 5 5-5" />
+        </>
+      ) : (
+        <>
+          <path d="M32 50V14" />
+          <path d="M27 19l5-5 5 5" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function HandIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 40 48" fill="currentColor" className={className} aria-hidden>
+      <rect
+        x="6.5"
+        y="25"
+        width="9"
+        height="15"
+        rx="4.5"
+        transform="rotate(-20 11 32.5)"
+      />
+      <rect x="10" y="17" width="22" height="27" rx="10.5" />
+      <rect x="16" y="3" width="8" height="23" rx="4" />
+    </svg>
   );
 }
 
