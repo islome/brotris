@@ -426,14 +426,17 @@ export default function TetrisGame() {
         {/* Board hugs the grid; on phones it centres instead of stretching, so
             the panel never shows empty rails beside the playfield. */}
         <div className="flex items-start gap-4 max-sm:justify-center">
-          {/* Board */}
+          {/* The touch surface spans the whole phone width even though the panel
+              hugs the grid, so swipes that start near a screen edge still land. */}
           <div
-            className="relative touch-none overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2"
+            className="touch-none max-sm:flex max-sm:w-full max-sm:justify-center"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
             onTouchCancel={onTouchCancel}
           >
+            {/* Board */}
+            <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2">
             <div
               ref={gridRef}
               className="grid gap-[3px] xl:gap-1"
@@ -497,6 +500,7 @@ export default function TetrisGame() {
                 onClose={() => setSettingsOpen(false)}
               />
             )}
+            </div>
           </div>
 
           {/* Sidebar */}

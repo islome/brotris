@@ -119,6 +119,14 @@ export default function SettingsPanel({
             onChange={(vibration) => writeSettings({ vibration })}
           />
         </Row>
+
+        <Row label="Gesture qo'llanmasi" hint="Boshlang'ich ekranda">
+          <Toggle
+            checked={!settings.gesturesSeen}
+            label="Gesture qo'llanmasi"
+            onChange={(show) => writeSettings({ gesturesSeen: !show })}
+          />
+        </Row>
       </div>
 
       <footer className="shrink-0 border-t border-foreground/[0.08] px-4 py-3">
