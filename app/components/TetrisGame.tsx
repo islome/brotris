@@ -30,6 +30,7 @@ import {
   readSettings,
   serverSettings,
   subscribeSettings,
+  writeSettings,
 } from "../lib/settings";
 import SettingsPanel from "./SettingsPanel";
 
@@ -483,6 +484,7 @@ export default function TetrisGame() {
                 best={best}
                 newRecord={state.newRecord}
                 hold={settings.hold}
+                gesturesSeen={settings.gesturesSeen}
                 onPrimary={primaryAction}
               />
             )}
@@ -556,6 +558,7 @@ function Overlay({
   best,
   newRecord,
   hold,
+  gesturesSeen,
   onPrimary,
 }: {
   status: GameStatus;
@@ -563,6 +566,7 @@ function Overlay({
   best: number;
   newRecord: boolean;
   hold: boolean;
+  gesturesSeen: boolean;
   onPrimary: () => void;
 }) {
   return (
@@ -617,7 +621,7 @@ function Overlay({
             : "Boshlash — Space"}
       </p>
       {status === "idle" ? (
-        <GestureGuide hold={hold} />
+        gesturesSeen ? null : <GestureGuide hold={hold} />
       ) : (
         <p className="px-6 text-center text-[10px] uppercase leading-5 tracking-[0.2em] text-foreground/40 sm:hidden">
           {status === "paused"
@@ -630,13 +634,22 @@ function Overlay({
 }
 
 // Touch-only onboarding, so it never appears next to the keyboard hints.
+// Dismissing it is permanent until settings are reset to defaults.
 function GestureGuide({ hold }: { hold: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:hidden">
-      <GestureDemo kind="move" label="Harakat" />
-      <GestureDemo kind="tap" label="Burish" />
-      <GestureDemo kind="down" label="Tashlash" />
-      {hold && <GestureDemo kind="up" label="Saqlash" />}
+    <div className="flex flex-col items-center gap-3 sm:hidden">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+        <GestureDemo kind="move" label="Harakat" />
+        <GestureDemo kind="tap" label="Burish" />
+        <GestureDemo kind="down" label="Tashlash" />
+        {hold && <GestureDemo kind="up" label="Saqlash" />}
+      </div>
+      <button
+        onClick={() => writeSettings({ gesturesSeen: true })}
+        className="cursor-pointer rounded-full border border-foreground/15 bg-foreground/[0.05] px-6 py-2.5 text-[10px] font-medium uppercase tracking-[0.25em] text-foreground/60 transition hover:bg-foreground/[0.12] hover:text-foreground active:scale-95"
+      >
+        Tushunarli
+      </button>
     </div>
   );
 }

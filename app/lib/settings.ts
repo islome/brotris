@@ -16,6 +16,7 @@ export interface Settings {
   vibration: boolean;
   nextCount: NextCount;
   hold: boolean;
+  gesturesSeen: boolean; // onboarding state, not a panel setting
 }
 
 // Defaults reproduce the pre-settings behaviour exactly.
@@ -28,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = Object.freeze({
   vibration: true,
   nextCount: 1,
   hold: true,
+  gesturesSeen: false,
 });
 
 export const SETTINGS_KEY = "tetra-settings";
@@ -51,6 +53,10 @@ function sanitize(raw: unknown): Settings {
       typeof o.vibration === "boolean" ? o.vibration : DEFAULT_SETTINGS.vibration,
     nextCount: o.nextCount === 3 || o.nextCount === 5 ? o.nextCount : 1,
     hold: typeof o.hold === "boolean" ? o.hold : DEFAULT_SETTINGS.hold,
+    gesturesSeen:
+      typeof o.gesturesSeen === "boolean"
+        ? o.gesturesSeen
+        : DEFAULT_SETTINGS.gesturesSeen,
   };
 }
 
