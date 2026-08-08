@@ -633,11 +633,11 @@ function Overlay({
   );
 }
 
-// Touch-only onboarding, so it never appears next to the keyboard hints.
-// Dismissing it is permanent until settings are reset to defaults.
+// Shown at every size: touch works on tablets and touchscreen laptops, and the
+// keyboard hints live in the sidebar. Dismissing it persists until a settings reset.
 function GestureGuide({ hold }: { hold: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-3 sm:hidden">
+    <div className="flex flex-col items-center gap-3">
       <div className="grid grid-cols-2 gap-x-6 gap-y-1">
         <GestureDemo kind="move" label="Harakat" />
         <GestureDemo kind="tap" label="Burish" />
@@ -654,6 +654,13 @@ function GestureGuide({ hold }: { hold: boolean }) {
   );
 }
 
+const GESTURE_EMOJI = {
+  move: "👉🏼",
+  tap: "👆🏼",
+  down: "👇🏼",
+  up: "👆🏼",
+} as const;
+
 function GestureDemo({
   kind,
   label,
@@ -666,11 +673,14 @@ function GestureDemo({
       <div className="relative flex h-16 w-20 items-center justify-center">
         <GestureTrack kind={kind} />
         {kind === "tap" && (
-          <span className="gesture-ripple absolute top-1.5 size-5 rounded-full border border-foreground/60" />
+          <span className="gesture-ripple absolute top-2.5 size-5 rounded-full border border-foreground/60" />
         )}
-        <HandIcon
-          className={`gesture-hand gesture-hand-${kind} relative h-11 text-foreground/75`}
-        />
+        <span
+          aria-hidden
+          className={`gesture-hand gesture-hand-${kind} relative select-none text-[34px] leading-none`}
+        >
+          {GESTURE_EMOJI[kind]}
+        </span>
       </div>
       <span className="text-[9px] uppercase tracking-[0.2em] text-foreground/40">
         {label}
@@ -710,23 +720,6 @@ function GestureTrack({ kind }: { kind: "move" | "tap" | "down" | "up" }) {
           <path d="M27 19l5-5 5 5" />
         </>
       )}
-    </svg>
-  );
-}
-
-function HandIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 40 48" fill="currentColor" className={className} aria-hidden>
-      <rect
-        x="6.5"
-        y="25"
-        width="9"
-        height="15"
-        rx="4.5"
-        transform="rotate(-20 11 32.5)"
-      />
-      <rect x="10" y="17" width="22" height="27" rx="10.5" />
-      <rect x="16" y="3" width="8" height="23" rx="4" />
     </svg>
   );
 }
