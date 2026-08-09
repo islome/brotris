@@ -366,10 +366,10 @@ export default function TetrisGame() {
   };
 
   return (
-    <main className="relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden p-2 sm:gap-4 sm:p-4">
+    <main className="safe-pad relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden sm:gap-4">
       <Backdrop />
 
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_158px)/20),calc((100vw_-_57px)/10)),44px)] md:[--cell:clamp(17px,calc((100svh_-_160px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_185px)/20),40px)]">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_142px)/20),calc((100vw_-_var(--pad-left)_-_var(--pad-right)_-_41px)/10)),44px)] md:[--cell:clamp(17px,calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_128px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_153px)/20),40px)]">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">

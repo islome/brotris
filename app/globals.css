@@ -40,6 +40,31 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Page padding tracks the device safe area (notch, home indicator) but never
+   drops below the normal breathing room. Installed to the home screen the page
+   owns those strips, so the board sizing below subtracts the same variables —
+   otherwise the grid would run under the status bar. On every other device the
+   env() values are 0 and these collapse to the previous 8px / 16px. */
+:root {
+  --pad-top: max(0.5rem, env(safe-area-inset-top));
+  --pad-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  --pad-left: max(0.5rem, env(safe-area-inset-left));
+  --pad-right: max(0.5rem, env(safe-area-inset-right));
+}
+
+@media (min-width: 640px) {
+  :root {
+    --pad-top: max(1rem, env(safe-area-inset-top));
+    --pad-bottom: max(1rem, env(safe-area-inset-bottom));
+    --pad-left: max(1rem, env(safe-area-inset-left));
+    --pad-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+.safe-pad {
+  padding: var(--pad-top) var(--pad-right) var(--pad-bottom) var(--pad-left);
+}
+
 /* Subtle grid backdrop that follows the theme */
 .bg-grid {
   background-image:
