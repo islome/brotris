@@ -282,7 +282,13 @@ export default function TetrisGame() {
   } | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => {
-    if (status !== "playing" || e.touches.length > 1) {
+    // Gestures own the whole screen while a run is live, so the playfield is
+    // never the limit — but a touch that starts on a control belongs to it.
+    if (
+      status !== "playing" ||
+      e.touches.length > 1 ||
+      (e.target as HTMLElement).closest("button,input,[role='switch']")
+    ) {
       gestureRef.current = null;
       return;
     }
@@ -366,10 +372,20 @@ export default function TetrisGame() {
   };
 
   return (
-    <main className="safe-pad relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden sm:gap-4">
+    <main
+      className={`safe-pad relative flex min-h-svh select-none flex-col items-center justify-center gap-2 overflow-hidden sm:gap-4 ${
+        status === "playing" ? "touch-none" : ""
+      }`}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
+    >
       <Backdrop />
 
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_142px)/20),calc((100vw_-_var(--pad-left)_-_var(--pad-right)_-_41px)/10)),44px)] md:[--cell:clamp(17px,calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_128px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_153px)/20),40px)]">
+      {/* w-fit, not w-full: the column shrinks to the board so the header and
+          the stats line up with the playfield edges instead of overhanging it. */}
+      <div className="flex w-fit flex-col gap-2 sm:w-auto sm:gap-3 [--cell:clamp(15px,min(calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_142px)/20),calc((100vw_-_var(--pad-left)_-_var(--pad-right)_-_41px)/10)),44px)] md:[--cell:clamp(17px,calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_128px)/20),36px)] xl:[--cell:clamp(18px,calc((100svh_-_var(--pad-top)_-_var(--pad-bottom)_-_153px)/20),40px)]">
         {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
@@ -426,17 +442,8 @@ export default function TetrisGame() {
         {/* Board hugs the grid; on phones it centres instead of stretching, so
             the panel never shows empty rails beside the playfield. */}
         <div className="flex items-start gap-4 max-sm:justify-center">
-          {/* The touch surface spans the whole phone width even though the panel
-              hugs the grid, so swipes that start near a screen edge still land. */}
-          <div
-            className="touch-none max-sm:flex max-sm:w-full max-sm:justify-center"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            onTouchCancel={onTouchCancel}
-          >
-            {/* Board */}
-            <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2">
+          {/* Board */}
+          <div className="relative touch-none overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-1.5 shadow-2xl shadow-foreground/10 backdrop-blur-xl xl:p-2">
             <div
               ref={gridRef}
               className="grid gap-[3px] xl:gap-1"
@@ -500,7 +507,6 @@ export default function TetrisGame() {
                 onClose={() => setSettingsOpen(false)}
               />
             )}
-            </div>
           </div>
 
           {/* Sidebar */}
