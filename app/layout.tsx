@@ -23,7 +23,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "BROTRIS",
-    statusBarStyle: "black-translucent",
+    // Not "black-translucent": that needs viewport-fit=cover, and letting the
+    // page own the notch strips costs more board width than it gives back.
+    statusBarStyle: "black",
   },
   icons: {
     icon: [
@@ -41,7 +43,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover", // lets the page own the notch area; CSS pads it back
+  // Deliberately no viewportFit: "cover". With it, iOS hands the page the notch
+  // and home-indicator strips and reports them as insets, which the board then
+  // has to pad back — measured at 38px of lost board width on a Pro Max. Letting
+  // the browser reserve them keeps svh honest and the playfield wider.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#060609" },
